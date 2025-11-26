@@ -8,18 +8,27 @@
 <style>
     body {
         font-family: Arial, sans-serif;
-        margin: 30px;
+        margin: 0;
+        padding: 20px;
         background: #f4f6fa;
         color: #222;
+
+        /* ZENTRIERUNG FÜR ALLES */
+        display: flex;
+        flex-direction: column;
+        align-items: center;   /* horizontal mittig */
+        text-align: center;    /* Texte mittig */
     }
 
     h1 {
-        text-align: center;
         margin-bottom: 30px;
     }
 
     .input-group {
+        width: 100%;
+        max-width: 600px;   /* perfekt für Handy + Tablet */
         margin-bottom: 20px;
+        text-align: left;   /* damit Labels links bleiben */
     }
 
     label {
@@ -36,34 +45,9 @@
         border: 1px solid #bbb;
     }
 
-    #resultBox {
-        margin-top: 30px;
-        padding: 20px;
-        border-radius: 12px;
-        background: #0a2a60;
-        width: 180px;
-        display: none;
-        text-align: center;
-    }
-
-    .mat {
-        font-size: 36px;
-        font-weight: bold;
-        color: black;
-        background: white;
-        padding: 10px;
-        border-radius: 6px;
-    }
-
-    .lag {
-        font-size: 36px;
-        font-weight: bold;
-        color: yellow;
-        margin-top: 15px;
-    }
-
     button {
         width: 100%;
+        max-width: 600px;
         margin-top: 10px;
         padding: 14px;
         font-size: 20px;
@@ -72,10 +56,41 @@
         background: #004aad;
         color: white;
         font-weight: bold;
+        cursor: pointer;
     }
 
     button:active {
         background: #003680;
+    }
+
+    /* --- Ergebnisfeld komplett mittig --- */
+    #resultBox {
+        margin-top: 30px;
+        padding: 20px;
+        border-radius: 12px;
+        background: #0a2a60;
+        width: 100%;
+        max-width: 300px;
+        display: none;
+        text-align: center;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .mat {
+        font-size: 36px;
+        font-weight: bold;
+        color: black;
+        background: white;
+        padding: 14px 20px;
+        border-radius: 8px;
+    }
+
+    .lag {
+        font-size: 36px;
+        font-weight: bold;
+        color: yellow;
+        margin-top: 20px;
     }
 </style>
 
@@ -110,7 +125,6 @@ function checkMaterial() {
     let masse = normalize(document.getElementById("masse").value);
     let werk = normalize(document.getElementById("werkstoff").value);
 
-    // gültige Werte der Demo
     const validM1 = "50x70";
     const validM2 = "70x50";
     const validWerk = "v945";
