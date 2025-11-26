@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Material Finder</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 30px;
+        background: #f4f6fa;
+        color: #222;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .input-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 6px;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        font-size: 18px;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+    }
+
+    #resultBox {
+        margin-top: 30px;
+        padding: 20px;
+        border-radius: 12px;
+        background: #0a2a60;
+        width: 180px;
+        display: none;
+        text-align: center;
+    }
+
+    .mat {
+        font-size: 36px;
+        font-weight: bold;
+        color: black;
+        background: white;
+        padding: 10px;
+        border-radius: 6px;
+    }
+
+    .lag {
+        font-size: 36px;
+        font-weight: bold;
+        color: yellow;
+        margin-top: 15px;
+    }
+
+    button {
+        width: 100%;
+        margin-top: 10px;
+        padding: 14px;
+        font-size: 20px;
+        border: none;
+        border-radius: 6px;
+        background: #004aad;
+        color: white;
+        font-weight: bold;
+    }
+
+    button:active {
+        background: #003680;
+    }
+</style>
+
+</head>
+<body>
+
+<h1>Material Finder</h1>
+
+<div class="input-group">
+    <label>Maße (Format: 50 x 70)</label>
+    <input id="masse" placeholder="50 x 70">
+</div>
+
+<div class="input-group">
+    <label>Werkstoff</label>
+    <input id="werkstoff" placeholder="V945">
+</div>
+
+<button onclick="checkMaterial()">Suchen</button>
+
+<div id="resultBox">
+    <div class="mat" id="matOut"></div>
+    <div class="lag" id="lagOut"></div>
+</div>
+
+<script>
+function normalize(input) {
+    return input.replace(/\s+/g, "").toLowerCase();
+}
+
+function checkMaterial() {
+    let masse = normalize(document.getElementById("masse").value);
+    let werk = normalize(document.getElementById("werkstoff").value);
+
+    // gültige Werte der Demo
+    const validM1 = "50x70";
+    const validM2 = "70x50";
+    const validWerk = "v945";
+
+    if ((masse === validM1 || masse === validM2) && werk === validWerk) {
+        document.getElementById("matOut").innerText = "0067";
+        document.getElementById("lagOut").innerText = "8";
+        document.getElementById("resultBox").style.display = "block";
+    } else {
+        document.getElementById("matOut").innerText = "Keine Daten";
+        document.getElementById("lagOut").innerText = "-";
+        document.getElementById("resultBox").style.display = "block";
+    }
+}
+</script>
+
+</body>
+</html>
