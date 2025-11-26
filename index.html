@@ -13,7 +13,7 @@
         background: #f4f6fa;
         color: #222;
 
-        /* ZENTRIERUNG FÜR ALLES */
+        /* Alles zentrieren */
         display: flex;
         flex-direction: column;
         align-items: center;   /* horizontal mittig */
@@ -21,14 +21,14 @@
     }
 
     h1 {
-        margin-bottom: 30px;
+        margin-bottom: 20px;
     }
 
     .input-group {
         width: 100%;
-        max-width: 600px;   /* perfekt für Handy + Tablet */
-        margin-bottom: 20px;
-        text-align: left;   /* damit Labels links bleiben */
+        max-width: 600px;   /* gut für Handy + Tablet */
+        margin-bottom: 15px;
+        text-align: left;   /* Labels bleiben links */
     }
 
     label {
@@ -50,7 +50,7 @@
         max-width: 600px;
         margin-top: 10px;
         padding: 14px;
-        font-size: 20px;
+        font-size: 18px;
         border: none;
         border-radius: 6px;
         background: #004aad;
@@ -63,7 +63,22 @@
         background: #003680;
     }
 
-    /* --- Ergebnisfeld komplett mittig --- */
+    #importButton {
+        background: #777;
+        margin-bottom: 5px;
+    }
+
+    #importButton:active {
+        background: #555;
+    }
+
+    #importStatus {
+        margin-top: 6px;
+        font-size: 14px;
+        color: #333;
+    }
+
+    /* Ergebnisfeld mittig */
     #resultBox {
         margin-top: 30px;
         padding: 20px;
@@ -99,6 +114,11 @@
 
 <h1>Material Finder</h1>
 
+<!-- Excel-Import -->
+<button id="importButton" onclick="triggerExcelInput()">Excel importieren</button>
+<input type="file" id="excelInput" accept=".xlsx,.xls,.csv" style="display:none">
+<div id="importStatus">Keine Excel-Daten importiert (Demo-Datensatz aktiv).</div>
+
 <div class="input-group">
     <label>Maße (Format: 50 x 70)</label>
     <input id="masse" placeholder="50 x 70">
@@ -116,28 +136,162 @@
     <div class="lag" id="lagOut"></div>
 </div>
 
+<!-- Excel-Library von CDN (für das Einlesen von xlsx) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <script>
+let materialData = []; // hier landen alle Datensätze aus der Excel
+
 function normalize(input) {
+    if (!input) return "";
     return input.replace(/\s+/g, "").toLowerCase();
 }
 
+// Maße wie "50 x 70" oder "70x50" -> Normalform "50x70" (sortiert)
+function normalizeMasse(input) {
+    if (!input) return "";
+    let match = input.match(/(\d+)\s*x\s*(\d+)/i);
+    if (!match) return "";
+    let a = parseInt(match[1], 10);
+    let b = parseInt(match[2], 10);
+    let min = Math.min(a, b);
+    let max = Math.max(a, b);
+    return min + "x" + max;
+}
+
+function triggerExcelInput() {
+    document.getElementById("excelInput").click();
+}
+
+document.getElementById("excelInput").addEventListener("change", handleExcelFile, false);
+
+function handleExcelFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheet = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheet];
+
+        // sheet_to_json mit header:1 -> Array von Arrays (erste Zeile Header)
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        if (!rows || rows.length < 2) {
+            document.getElementById("importStatus").innerText =
+                "Excel erkannt, aber keine Daten gefunden.";
+            materialData = [];
+            return;
+        }
+
+        const headers = rows[0].map(h => (h || "").toString().toLowerCase());
+
+        // Versuch: Spalten-Indizes automatisch erkennen
+        let idxMat = headers.findIndex(h => h.includes("mat"));
+        let idxWerk = headers.findIndex(h => h.includes("werkstoff"));
+        let idxBez = headers.findIndex(h => h.includes("bezeichnung"));
+        let idxLag = headers.findIndex(h => h.includes("lag"));
+        if (idxLag === -1) {
+            idxLag = headers.findIndex(h => h.includes("lager"));
+        }
+
+        materialData = [];
+
+        for (let r = 1; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row || row.length === 0) continue;
+
+            let mat = idxMat >= 0 ? (row[idxMat] || "").toString().trim() : "";
+            let werk = "";
+            if (idxWerk >= 0) {
+                werk = (row[idxWerk] || "").toString().trim();
+            } else if (idxBez >= 0) {
+                // Werkstoff aus Bezeichnung: z.B. erster "Block" (bis erstes Leerzeichen)
+                let bez = (row[idxBez] || "").toString().trim();
+                werk = bez.split(/\s+/)[0] || "";
+            }
+
+            let lag = idxLag >= 0 ? (row[idxLag] || "").toString().trim() : "";
+
+            // Maße: irgendeine Zelle, in der ein "x" vorkommt
+            let masseRoh = "";
+            for (let c = 0; c < row.length; c++) {
+                let cell = (row[c] || "").toString();
+                if (cell.toLowerCase().includes("x")) {
+                    let m = cell.match(/(\d+)\s*x\s*(\d+)/i);
+                    if (m) {
+                        masseRoh = m[0]; // z.B. "50 x 70"
+                        break;
+                    }
+                }
+            }
+
+            const masseNorm = normalizeMasse(masseRoh);
+            const werkNorm = normalize(werk);
+
+            if (mat && werkNorm && masseNorm && lag) {
+                materialData.push({
+                    mat: mat,
+                    werkstoff: werkNorm,
+                    masse: masseNorm,
+                    lag: lag
+                });
+            }
+        }
+
+        if (materialData.length > 0) {
+            document.getElementById("importStatus").innerText =
+                "Excel-Daten importiert: " + materialData.length + " Datensätze.";
+        } else {
+            document.getElementById("importStatus").innerText =
+                "Excel geladen, aber keine verwertbaren Datensätze gefunden (bitte Header prüfen).";
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
 function checkMaterial() {
-    let masse = normalize(document.getElementById("masse").value);
-    let werk = normalize(document.getElementById("werkstoff").value);
+    let masseInput = document.getElementById("masse").value;
+    let werkInput = document.getElementById("werkstoff").value;
 
-    const validM1 = "50x70";
-    const validM2 = "70x50";
-    const validWerk = "v945";
+    const masseNorm = normalizeMasse(masseInput);
+    const werkNorm = normalize(werkInput);
 
-    if ((masse === validM1 || masse === validM2) && werk === validWerk) {
-        document.getElementById("matOut").innerText = "0067";
-        document.getElementById("lagOut").innerText = "8";
-        document.getElementById("resultBox").style.display = "block";
+    let mat = "";
+    let lag = "";
+
+    if (materialData.length > 0 && masseNorm && werkNorm) {
+        // Suche in importierten Daten
+        const found = materialData.find(
+            item => item.masse === masseNorm && item.werkstoff === werkNorm
+        );
+        if (found) {
+            mat = found.mat;
+            lag = found.lag;
+        }
+    } else {
+        // Fallback: Demo-Datensatz, falls noch nichts importiert wurde
+        const validM1 = "50x70";
+        const validM2 = "70x50";
+        const validWerk = "v945";
+        if ((masseNorm === validM1 || masseNorm === normalizeMasse("70x50")) &&
+            werkNorm === validWerk) {
+            mat = "0067";
+            lag = "8";
+        }
+    }
+
+    if (mat) {
+        document.getElementById("matOut").innerText = mat;
+        document.getElementById("lagOut").innerText = lag;
     } else {
         document.getElementById("matOut").innerText = "Keine Daten";
         document.getElementById("lagOut").innerText = "-";
-        document.getElementById("resultBox").style.display = "block";
     }
+    document.getElementById("resultBox").style.display = "block";
 }
 </script>
 
